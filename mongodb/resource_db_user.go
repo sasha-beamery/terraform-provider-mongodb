@@ -92,13 +92,6 @@ func resourceDatabaseUserUpdate(ctx context.Context, data *schema.ResourceData, 
 	var userName = data.Get("name").(string)
 	var database = data.Get("auth_database").(string)
 	var userPassword = data.Get("password").(string)
-
-	adminDB := client.Database(database)
-
-	result := adminDB.RunCommand(context.Background(), bson.D{{Key: "dropUser", Value: userName}})
-	if result.Err() != nil {
-		return diag.Errorf("%s", result.Err())
-	}
 	var roleList []Role
 	var user = DbUser{
 		Name:     userName,
@@ -109,14 +102,12 @@ func resourceDatabaseUserUpdate(ctx context.Context, data *schema.ResourceData, 
 	if roleMapErr != nil {
 		return diag.Errorf("Error decoding map : %s ", roleMapErr)
 	}
-	err2 := createUser(client, user, roleList, database)
-	if err2 != nil {
-		return diag.Errorf("Could not create the user : %s ", err2)
+
+	err := updateUser(client, user, roleList, database)
+	if err != nil {
+		return diag.Errorf("Could not update the user : %s ", err)
 	}
 
-	newId := database + "." + userName
-	encoded := base64.StdEncoding.EncodeToString([]byte(newId))
-	data.SetId(encoded)
 	return resourceDatabaseUserRead(ctx, data, i)
 }
 

@@ -223,6 +223,22 @@ func createUser(client *mongo.Client, user DbUser, roles []Role, database string
 	return nil
 }
 
+func updateUser(client *mongo.Client, user DbUser, roles []Role, database string) error {
+	var result *mongo.SingleResult
+	if len(roles) != 0 {
+		result = client.Database(database).RunCommand(context.Background(), bson.D{{Key: "updateUser", Value: user.Name},
+			{Key: "pwd", Value: user.Password}, {Key: "roles", Value: roles}})
+	} else {
+		result = client.Database(database).RunCommand(context.Background(), bson.D{{Key: "updateUser", Value: user.Name},
+			{Key: "pwd", Value: user.Password}, {Key: "roles", Value: []bson.M{}}})
+	}
+
+	if result.Err() != nil {
+		return result.Err()
+	}
+	return nil
+}
+
 func getUser(client *mongo.Client, username string, database string) (SingleResultGetUser, error) {
 	var result *mongo.SingleResult
 	result = client.Database(database).RunCommand(context.Background(), bson.D{{Key: "usersInfo", Value: bson.D{
