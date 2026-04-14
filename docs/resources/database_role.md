@@ -19,10 +19,32 @@ resource "mongodb_db_role" "example_role" {
     collection = ""
     actions = ["listCollections", "createCollection","createIndex", "dropIndex", "insert", "remove", "renameCollectionSameDB", "update"]
   }
-
-
 }
 ```
+
+## Example Usage with cluster-level privileges
+
+Use `cluster = true` instead of `db`/`collection` to grant actions that apply to the cluster as a whole (e.g. replica set inspection, server diagnostics).
+
+```hcl
+resource "mongodb_db_role" "ops_role" {
+  name     = "opsMonitoring"
+  database = "admin"
+
+  # Replica set status & config (read-only)
+  privilege {
+    cluster = true
+    actions = ["replSetGetStatus", "replSetGetConfig"]
+  }
+
+  # Server diagnostics
+  privilege {
+    cluster = true
+    actions = ["serverStatus", "connPoolStats"]
+  }
+}
+```
+
 ## Example Usage with inherited roles
 
 ```hcl
@@ -63,11 +85,12 @@ resource "mongodb_db_role" "role_2" {
 ### Privilege
 Each object in the privilege array represents an individual privilege action granted by the role. It is not required.
 
-* `actions` - (Required) Array of the privilege action. For a complete list of actions available , see [Custom Role Actions](https://docs.mongodb.com/manual/reference/privilege-actions/)
+* `actions` - (Required) Array of the privilege action. For a complete list of actions available, see [Custom Role Actions](https://docs.mongodb.com/manual/reference/privilege-actions/).
 -> **Note**: The privilege actions available to the Custom Roles API resource represent a subset of the privilege actions available in the Atlas Custom Roles UI.
-* `db`	Database on which the action is granted.
-* `collection` - (Optional) Collection on which the action is granted. 
--> **Note**: If collection value is an empty string, the actions are granted on all collections within the database specified in the privilege.db field.
+* `db` - (Optional) Database on which the action is granted. Mutually exclusive with `cluster`.
+* `collection` - (Optional) Collection on which the action is granted. Mutually exclusive with `cluster`.
+-> **Note**: If `collection` is an empty string, the actions are granted on all collections within the database specified in `db`.
+* `cluster` - (Optional, default `false`) When `true`, the privilege applies to the cluster as a whole rather than a specific database or collection. Use this for actions such as `replSetGetStatus`, `replSetGetConfig`, `serverStatus`, and other cluster-level operations. When `cluster = true`, `db` and `collection` must not be set.
              
 ### Inherited Roles
 Each object in the inheritedRoles array represents a key-value pair indicating the inherited role and the database on which the role is granted. It is an optional field.
@@ -83,7 +106,7 @@ Each object in the inheritedRoles array represents a key-value pair indicating t
 
 ## Import
 
-Mongodb users can be imported using the hex encoded id, e.g. for a user named `user_test` and his database id `test_db` :
+Mongodb roles can be imported using the hex encoded id, e.g. for a role named `role_test` and its database id `test_db` :
 
 ```sh
 $ printf '%s' "test_db.role_test"  | base64

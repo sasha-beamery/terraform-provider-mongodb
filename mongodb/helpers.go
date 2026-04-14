@@ -36,17 +36,23 @@ func getActions(privilegeDto PrivilegeDto) []string {
 	return actions
 }
 
-func getPrivilegesFromDto(privilegeDtos []PrivilegeDto) []Privilege {
-	var privileges []Privilege
+func getPrivilegesFromDto(privilegeDtos []PrivilegeDto) []bson.D {
+	var privileges []bson.D
 
 	for _, element := range privilegeDtos {
-		var prv Privilege
-		prv.Resource = Resource{
-			Db:         element.Db,
-			Collection: element.Collection,
+		var resource bson.D
+		if element.Cluster {
+			resource = bson.D{{Key: "cluster", Value: true}}
+		} else {
+			resource = bson.D{
+				{Key: "db", Value: element.Db},
+				{Key: "collection", Value: element.Collection},
+			}
 		}
-		prv.Actions = getActions(element)
-		privileges = append(privileges, prv)
+		privileges = append(privileges, bson.D{
+			{Key: "resource", Value: resource},
+			{Key: "actions", Value: getActions(element)},
+		})
 	}
 
 	return privileges

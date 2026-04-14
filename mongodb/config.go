@@ -54,6 +54,7 @@ func (role Role) String() string {
 type PrivilegeDto struct {
 	Db         string   `json:"db"`
 	Collection string   `json:"collection"`
+	Cluster    bool     `json:"cluster"`
 	Actions    []string `json:"actions"`
 }
 
@@ -84,6 +85,7 @@ type SingleResultGetRole struct {
 			Resource struct {
 				Db         string `json:"db"`
 				Collection string `json:"collection"`
+				Cluster    bool   `json:"cluster"`
 			} `json:"resource"`
 			Actions []string `json:"actions"`
 		} `json:"privileges"`

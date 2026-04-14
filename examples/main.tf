@@ -62,6 +62,17 @@ resource "mongodb_db_role" "role4" {
   name = "new_role4"
 }
 
+resource "mongodb_db_role" "cluster_role" {
+  database = "admin"
+  name     = "opsMonitoring"
+
+  # Replica set status & config (read-only cluster-level privileges)
+  privilege {
+    cluster = true
+    actions = ["replSetGetStatus", "replSetGetConfig"]
+  }
+}
+
 resource "mongodb_db_user" "user" {
   auth_database = "example"
   name = "monta"

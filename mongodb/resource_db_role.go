@@ -13,6 +13,30 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// validateClusterPrivilege enforces that cluster = true is mutually exclusive
+// with db and collection. It accepts the raw map that Terraform produces when
+// decoding a privilege block so that it can also be called directly in tests.
+func validateClusterPrivilege(priv map[string]interface{}) error {
+	cluster, _ := priv["cluster"].(bool)
+	db, _ := priv["db"].(string)
+	collection, _ := priv["collection"].(string)
+	if cluster && (db != "" || collection != "") {
+		return fmt.Errorf(
+			"privilege block: 'cluster = true' is mutually exclusive with 'db' and 'collection' — remove 'db' and 'collection' when using cluster-level privileges",
+		)
+	}
+	return nil
+}
+
+func privilegesMutualExclusivityDiff(_ context.Context, d *schema.ResourceDiff, _ interface{}) error {
+	for _, p := range d.Get("privilege").(*schema.Set).List() {
+		if err := validateClusterPrivilege(p.(map[string]interface{})); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func resourceDatabaseRole() *schema.Resource {
 	return &schema.Resource{
 		CreateContext: resourceDatabaseRoleCreate,
@@ -22,6 +46,7 @@ func resourceDatabaseRole() *schema.Resource {
 		Importer: &schema.ResourceImporter{
 			StateContext: schema.ImportStatePassthroughContext,
 		},
+		CustomizeDiff: privilegesMutualExclusivityDiff,
 		Schema: map[string]*schema.Schema{
 			"database": {
 				Type:     schema.TypeString,
@@ -46,6 +71,11 @@ func resourceDatabaseRole() *schema.Resource {
 						"collection": {
 							Type:     schema.TypeString,
 							Optional: true,
+						},
+						"cluster": {
+							Type:     schema.TypeBool,
+							Optional: true,
+							Default:  false,
 						},
 
 						"actions": {
@@ -204,6 +234,7 @@ func resourceDatabaseRoleRead(ctx context.Context, data *schema.ResourceData, i 
 		privileges[i] = map[string]interface{}{
 			"db":         s.Resource.Db,
 			"collection": s.Resource.Collection,
+			"cluster":    s.Resource.Cluster,
 			"actions":    actions,
 		}
 	}
